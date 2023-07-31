@@ -39,6 +39,8 @@ enum EntityType: int {
 class DocumentInfo {
     public function __construct(
         public EntityType $type,
+        public object $rawRequestSapObj,
+        public object $documentObj,
         public int $docEntry
     ) { }
 }
@@ -51,8 +53,8 @@ class ApiPostingService {
         private string $apiSessionId
     ) { }
 
-    public function callDocumentApi(string $entityPath, object $documentObj = null): object {
-        $headers[] = 'Cookie: B1SESSION='.$this->apiSessionId.'; ROUTEID=.node0;';
+    public function callDocumentApi(string $entityPath, object $documentObj = null): ?object {
+        $headers[] = 'Cookie: B1SESSION='.$this->apiSessionId.';';
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
         curl_setopt($curl, CURLOPT_HEADER, 0);
@@ -78,8 +80,8 @@ class ApiPostingService {
                 $documentObj = $this->parseDocObjFromRequestObj($entity, $SAPObj, $args);
                 if (isset($processCreatedDocObj)) $processCreatedDocObj($SAPObj, $documentObj);
                 $resObj = $this->callDocumentApi($entityName, (object)$documentObj);
-                if (!isset($resObj->error) && !isset($resObj->code)) {
-                    $this->addedDocumentInfos[] = new DocumentInfo($entity, $resObj->DocEntry);
+                if (!is_null($resObj) && !isset($resObj->error) && !isset($resObj->code)) {
+                    $this->addedDocumentInfos[] = new DocumentInfo($entity, $SAPObj, (object)$documentObj, $resObj->DocEntry);
                 }
                 return $resObj;
             }
@@ -96,8 +98,28 @@ class ApiPostingService {
         }
     }
 
-    public function cancelAddedDocument(int $objectType, int $docEntry) {
-        $this->callDocumentApi(EntityType::from($objectType)->name()."($docEntry)/Cancel");
+    public function cancelAddedDocuments() {
+        for ($i = count($this->addedDocumentInfos) - 1; $i > 0; $i--) { 
+            $addedDocumentInfo = $this->addedDocumentInfos[$i];
+            $this->cancelAddedDocument($addedDocumentInfo->type, $addedDocumentInfo->docEntry, $addedDocumentInfo);
+        }
+    }
+
+    public function cancelAddedDocument(int|EntityType  $objectType, int $docEntry, DocumentInfo $docInfo = null) {
+        $entity = is_int($objectType) ? EntityType::from($objectType) : $objectType;
+        switch ($entity) {
+            case EntityType::AR_DOWN_PAYMENT:
+                unset($docInfo->documentObj->JournalMemo);
+                foreach ($docInfo->documentObj->DocumentLines as $i => &$line) {
+                    $line['BaseEntry'] = $docEntry;
+                    $line['BaseLine'] = $i;
+                    $line['BaseType'] = $entity->value;
+                }
+                $this->callDocumentApi(EntityType::AR_CREDIT_MEMO->name(), $docInfo->documentObj);
+            default:
+                $this->callDocumentApi($entity->name()."($docEntry)/Cancel");
+                break;
+        }
     }
 
     public function postProcessApiPosting(object $resObj, object $SAPObj, bool $enableExternalLogging = true): object {
