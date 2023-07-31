@@ -6,6 +6,7 @@ enum EntityType: int {
     case GOODS_RETURN = 21;
     case AR_DOWN_PAYMENT = 203;
     case AR_CREDIT_MEMO = 14;
+    case AP_CREDIT_MEMO = 19;
     case INCOMING_PAYMENT = 24;
     case OUTGOING_PAYMENT = 46;
 
@@ -17,6 +18,7 @@ enum EntityType: int {
             EntityType::GOODS_RETURN => 'PurchaseReturns',   
             EntityType::AR_DOWN_PAYMENT => 'DownPayments',   
             EntityType::AR_CREDIT_MEMO => 'CreditNotes',   
+            EntityType::AP_CREDIT_MEMO => 'PurchaseCreditNotes',   
             EntityType::INCOMING_PAYMENT => 'IncomingPayments',   
             EntityType::OUTGOING_PAYMENT => 'VendorPayments',   
         };
@@ -30,6 +32,7 @@ enum EntityType: int {
             EntityType::GOODS_RETURN => 'it_PurchaseReturn',   
             EntityType::AR_DOWN_PAYMENT => 'it_DownPayment',   
             EntityType::AR_CREDIT_MEMO => 'it_CredItnote',   
+            EntityType::AP_CREDIT_MEMO => 'it_PurchaseCreditNote',   
             EntityType::INCOMING_PAYMENT => 'it_Receipt',   
             EntityType::OUTGOING_PAYMENT => 'it_PaymentAdvice',   
         };
