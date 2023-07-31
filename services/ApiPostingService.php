@@ -6,6 +6,7 @@ enum EntityType: int {
     case GOODS_RETURN = 21;
     case AR_DOWN_PAYMENT = 203;
     case AR_CREDIT_MEMO = 14;
+    case AP_INVOICE = 18;
     case AP_CREDIT_MEMO = 19;
     case INCOMING_PAYMENT = 24;
     case OUTGOING_PAYMENT = 46;
@@ -18,6 +19,7 @@ enum EntityType: int {
             EntityType::GOODS_RETURN => 'PurchaseReturns',   
             EntityType::AR_DOWN_PAYMENT => 'DownPayments',   
             EntityType::AR_CREDIT_MEMO => 'CreditNotes',   
+            EntityType::AP_INVOICE => 'PurchaseInvoices',   
             EntityType::AP_CREDIT_MEMO => 'PurchaseCreditNotes',   
             EntityType::INCOMING_PAYMENT => 'IncomingPayments',   
             EntityType::OUTGOING_PAYMENT => 'VendorPayments',   
@@ -32,6 +34,7 @@ enum EntityType: int {
             EntityType::GOODS_RETURN => 'it_PurchaseReturn',   
             EntityType::AR_DOWN_PAYMENT => 'it_DownPayment',   
             EntityType::AR_CREDIT_MEMO => 'it_CredItnote',   
+            EntityType::AP_INVOICE => 'it_PurchaseInvoice',   
             EntityType::AP_CREDIT_MEMO => 'it_PurchaseCreditNote',   
             EntityType::INCOMING_PAYMENT => 'it_Receipt',   
             EntityType::OUTGOING_PAYMENT => 'it_PaymentAdvice',   
@@ -136,6 +139,7 @@ class ApiPostingService {
     }
 
     private function processFailedLog(object $resObj): object {
+        $resObj = json_decode(json_encode($resObj));
         $data = (object)[
             "valid" => false, 
             "msg" => isset($resObj->error) ? $resObj->error->message->value : $resObj->message->value,
@@ -266,7 +270,9 @@ class ApiPostingService {
                 if (isset($lineExplicitFields) && (bool)$lineExplicitFields) {
                     foreach ($lineExplicitFields as $key => $value) {
                         if (is_null($value)) continue;
-                        if (str_contains($value, 'DEFAULT')) {
+                        if (is_callable($value)) {
+                            $lineObj[$key] = $value($line);
+                        } else if (str_contains($value, 'DEFAULT')) {
                             $lineObj[$key] = $line->{trim(explode('-', $value)[1])};
                         } else {
                             $lineObj[$key] = $value;
